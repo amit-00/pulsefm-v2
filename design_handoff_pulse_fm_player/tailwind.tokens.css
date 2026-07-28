@@ -1,0 +1,66 @@
+/* Pulse FM player — design tokens for Tailwind CSS v4.
+   Paste into your global stylesheet. */
+
+@import "tailwindcss";
+
+@theme {
+  --color-canvas: #DEDDD8;
+  --color-bone:   #EDECE7;
+  --color-ink:    #111111;
+  --color-paper:  #F2F1EF;
+  --color-accent: #D6252B;
+
+  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "Doto", ui-monospace, monospace;
+
+  --radius-app:    16px;
+  --radius-device: 46px;
+  --radius-sheet:  34px;
+
+  --shadow-frame: 0 40px 80px -30px rgb(0 0 0 / 0.35);
+}
+
+@keyframes mirrorPulse {
+  0%, 100% { transform: scaleY(.18); }
+  50%      { transform: scaleY(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-waveform-bar] { animation: none !important; transform: scaleY(1) !important; }
+}
+
+/* ---------------------------------------------------------------------------
+   Tailwind CSS v3 equivalent — tailwind.config.js
+
+   module.exports = {
+     theme: {
+       extend: {
+         colors: {
+           canvas: '#DEDDD8',
+           bone:   '#EDECE7',
+           ink:    '#111111',
+           paper:  '#F2F1EF',
+           accent: '#D6252B',
+         },
+         fontFamily: {
+           sans: ['"Helvetica Neue"', 'Helvetica', 'Arial', 'sans-serif'],
+           mono: ['Doto', 'ui-monospace', 'monospace'],
+         },
+         borderRadius: {
+           app:    '16px',
+           device: '46px',
+           sheet:  '34px',
+         },
+         boxShadow: {
+           frame: '0 40px 80px -30px rgba(0,0,0,0.35)',
+         },
+         keyframes: {
+           mirrorPulse: {
+             '0%,100%': { transform: 'scaleY(.18)' },
+             '50%':     { transform: 'scaleY(1)' },
+           },
+         },
+       },
+     },
+   };
+--------------------------------------------------------------------------- */
