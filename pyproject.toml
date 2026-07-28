@@ -11,6 +11,7 @@ members = ["services/*", "packages/*"]
 
 [tool.uv.sources]
 pulsefm-models = { workspace = true }
+pulsefm-radio-service = { workspace = true }
 
 [dependency-groups]
 dev = ["ruff>=0.6.0"]
