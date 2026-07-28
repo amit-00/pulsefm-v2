@@ -3207,7 +3207,7 @@ git commit -m "feat(client): scaffold Vite/React/Tailwind with handoff tokens an
 
 **Files:**
 - Create: `client/src/lib/types.ts`, `clock.ts`, `format.ts`, `pollDiff.ts`, `api.ts`
-- Test: `client/src/lib/clock.test.ts`, `format.test.ts`, `pollDiff.test.ts`
+- Test: `client/src/lib/clock.test.ts`, `format.test.ts`, `pollDiff.test.ts`, `api.test.ts`
 
 **Interfaces:**
 - Consumes: the `/v1/state` shape from Task 7.
@@ -3449,9 +3449,18 @@ export function diffSnapshots(
 import type { StateSnapshot } from "./types";
 
 export class StationUnavailableError extends Error {
+  /** Kept as a field, not just interpolated: callers branch on 503 ("the
+   *  station has not started yet") versus everything else. */
+  readonly status: number;
+
   constructor(status: number) {
-    super(`Station API returned ${status}. The station may not have started yet.`);
+    super(
+      status === 503
+        ? "The station has not started yet."
+        : `Station API returned ${status}.`,
+    );
     this.name = "StationUnavailableError";
+    this.status = status;
   }
 }
 
