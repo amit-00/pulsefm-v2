@@ -48,7 +48,11 @@ export function useAudioSlots({
     const make = () => {
       const element = new Audio();
       element.preload = "auto";
-      // Required for the slice 4 WebAudio analyser; harmless before then.
+      // Required for the slice 4 WebAudio analyser, but NOT harmless before
+      // then: setting crossOrigin turns the media fetch into a CORS request,
+      // and a response without Access-Control-Allow-Origin fails the load
+      // outright — no audio at all. This is a slice-1 playback blocker, not
+      // a deferred slice-4 concern. See terraform/storage.tf.
       element.crossOrigin = "anonymous";
       return element;
     };

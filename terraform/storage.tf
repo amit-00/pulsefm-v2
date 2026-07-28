@@ -5,15 +5,27 @@ resource "google_storage_bucket" "songs" {
 
   uniform_bucket_level_access = true
 
-  # The analyser (slice 4) reads audio through WebAudio, which requires the
-  # element to be crossOrigin="anonymous" and the response to carry CORS
-  # headers. Without this the analyser silently returns zeros.
+  # This is a SLICE-1 PLAYBACK BLOCKER, not a slice-4 analyser concern:
+  # client/src/hooks/useAudioSlots.ts sets crossOrigin="anonymous" on the
+  # <audio> element today, which makes every track fetch a CORS request. A
+  # response without Access-Control-Allow-Origin fails the load outright —
+  # no audio plays, full stop. (It will *also* matter for the slice 4
+  # WebAudio analyser, which needs the same headers or silently reads zeros,
+  # but that's secondary to playback working at all.)
   #
   # NOT YET CONFIRMED: it isn't documented whether bucket-level CORS is
   # honoured for requests served through the backend_bucket/Cloud CDN path,
   # as opposed to direct storage.googleapis.com access. If it isn't, this
   # block is inert for the URL the player actually uses (cdn_base_url).
   # Check this against the real cdn_base_url at first apply.
+  #
+  # SECOND, INDEPENDENT FAILURE MODE: Cloud CDN does not vary its cache on
+  # the `Origin` header by default. Even where GCS emits correct CORS
+  # headers, a response cached for one Origin can be served to a later
+  # requester from a different Origin, carrying the wrong
+  # Access-Control-Allow-Origin value — the browser then rejects it. This
+  # needs a cache key policy (or Vary: Origin honoured end-to-end) to be
+  # actually safe, and is not yet done.
   cors {
     origin          = var.client_origins
     method          = ["GET", "HEAD"]
