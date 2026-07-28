@@ -9,6 +9,9 @@ Slices 0 and 1 are complete: the station rotates through a seeded pool on a
 server-driven clock, and the React player joins mid-song in sync. Polls,
 voting, auth, and generation land in slices 2 and 3.
 
+Nothing below has been run against real infrastructure. The Terraform is
+`validate`-clean but has never been applied, and no GCP project exists yet.
+
 ## Layout
 
 - `services/radio-service` — rotation clock, sole writer of station state
