@@ -44,13 +44,14 @@ class FakeRepository:
         return self.songs.get(song_id)
 
 
-def _client(repository: FakeRepository) -> TestClient:
+def _client(repository: FakeRepository, allowed_origins: list[str] | None = None) -> TestClient:
     return TestClient(
         build_app(
             repository,
             cdn_base_url="https://cdn.pulsefm.app",
             state_max_age_seconds=1,
             clock=lambda: SERVER_TIME,
+            allowed_origins=allowed_origins if allowed_origins is not None else [],
         )
     )
 
@@ -67,7 +68,7 @@ def test_state_returns_the_snapshot() -> None:
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["serverTime"] == "2026-07-28T12:01:00Z"
+    assert payload["serverTime"] == "2026-07-28T12:01:00.000Z"
     assert payload["current"]["songId"] == "song-1"
     assert payload["current"]["url"] == "https://cdn.pulsefm.app/tracks/song-1.m4a"
     assert payload["next"] == {"songId": "song-2", "status": "fallback"}
@@ -105,3 +106,19 @@ def test_queue_omits_a_next_song_whose_document_is_absent() -> None:
     response = _client(FakeRepository(STATION, {"song-1": SONGS["song-1"]})).get("/v1/queue")
 
     assert [item["songId"] for item in response.json()["items"]] == ["song-1"]
+
+
+def test_state_carries_cors_header_for_a_configured_origin() -> None:
+    client = _client(FakeRepository(STATION, SONGS), allowed_origins=["https://pulsefm.app"])
+
+    response = client.get("/v1/state", headers={"Origin": "https://pulsefm.app"})
+
+    assert response.headers["access-control-allow-origin"] == "https://pulsefm.app"
+
+
+def test_state_carries_no_cors_header_when_no_origin_is_configured() -> None:
+    client = _client(FakeRepository(STATION, SONGS), allowed_origins=[])
+
+    response = client.get("/v1/state", headers={"Origin": "https://pulsefm.app"})
+
+    assert "access-control-allow-origin" not in response.headers

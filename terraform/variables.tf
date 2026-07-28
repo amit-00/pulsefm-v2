@@ -22,7 +22,7 @@ variable "songs_bucket_name" {
 
 variable "client_origins" {
   type        = list(string)
-  description = "Origins allowed to read audio with CORS (needed by the slice 4 analyser)."
+  description = "Origins allowed to read audio with CORS from the GCS bucket (slice 1 playback needs this — see terraform/storage.tf) and origins allowed to call station-api's /v1/state and /v1/queue cross-origin (see the station_api service in terraform/cloud_run.tf). Both consumers share this single list rather than each getting their own."
   default     = ["http://localhost:5173"]
 }
 

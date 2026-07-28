@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from typing import Protocol
 
 from fastapi import FastAPI, HTTPException, Response
+from fastapi.middleware.cors import CORSMiddleware
 from google.cloud import firestore
 from pulsefm_models.station import CurrentSong, QueueResponse, StateResponse
 
@@ -34,9 +35,22 @@ def build_app(
     cdn_base_url: str,
     state_max_age_seconds: int,
     clock: Clock,
+    allowed_origins: list[str],
 ) -> FastAPI:
     app = FastAPI(title="pulsefm-station-api")
     cache_control = f"public, max-age={state_max_age_seconds}"
+
+    # Closed unless explicitly configured: only attach CORS when the
+    # deployment named at least one allowed origin. The endpoint is
+    # anonymous and must stay publicly cacheable, so credentials are never
+    # allowed and only GET is exposed.
+    if allowed_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=allowed_origins,
+            allow_methods=["GET"],
+            allow_credentials=False,
+        )
 
     def _load_state() -> StateResponse:
         station = repository.get_station()
@@ -105,6 +119,7 @@ def _build_default_app() -> FastAPI:
         cdn_base_url=settings.cdn_base_url,
         state_max_age_seconds=settings.state_max_age_seconds,
         clock=lambda: datetime.now(tz=UTC),
+        allowed_origins=settings.allowed_origins,
     )
 
 

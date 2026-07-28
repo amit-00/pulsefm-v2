@@ -85,6 +85,10 @@ resource "google_cloud_run_v2_service" "station_api" {
         name  = "CDN_BASE_URL"
         value = "http://${google_compute_global_address.cdn.address}"
       }
+      env {
+        name  = "ALLOWED_ORIGINS"
+        value = join(",", var.client_origins)
+      }
     }
   }
 }
