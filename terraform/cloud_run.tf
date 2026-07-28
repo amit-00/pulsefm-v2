@@ -2,12 +2,22 @@ locals {
   image_base = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.services.repository_id}"
 }
 
+# Images are pinned to :latest, so re-pushing the tag does NOT create a new
+# Cloud Run revision — Terraform sees no config change. After a re-push, force
+# one with `terraform apply -replace=google_cloud_run_v2_service.<name>` or
+# `gcloud run deploy`. Slice 4 should move to digest-pinned images.
+
 resource "google_cloud_run_v2_service" "radio" {
   name     = "radio-service"
   location = var.region
 
   # The control plane that spends money on GPUs is unreachable from the
   # internet; Cloud Tasks reaches it over internal ingress with OIDC.
+  #
+  # This works because the queue and this service are in the SAME project —
+  # Google routes same-project Cloud Tasks calls as internal traffic without
+  # them traversing a VPC. Move either to another project and ticking stops
+  # with no Terraform-time error.
   ingress = "INGRESS_TRAFFIC_INTERNAL_ONLY"
 
   template {
