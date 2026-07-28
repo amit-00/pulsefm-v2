@@ -3763,6 +3763,23 @@ export function useAudioSlots({
     return () => clearInterval(id);
   }, [startAtIso, offsetMs, durationMs]);
 
+  // A playing HTMLAudioElement is kept alive by the browser's media engine
+  // independently of JS references, so dropping the ref is not enough — without
+  // this, navigating away leaves the station playing with nothing on screen.
+  useEffect(() => {
+    const slots = slotsRef.current;
+    return () => {
+      if (!slots) {
+        return;
+      }
+      for (const element of slots) {
+        element.pause();
+        element.removeAttribute("src");
+        element.load();
+      }
+    };
+  }, []);
+
   const toggle = useCallback(() => {
     const slots = slotsRef.current;
     if (!slots || startAtIso === null) {
