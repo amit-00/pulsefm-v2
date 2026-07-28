@@ -13,7 +13,7 @@ from pydantic.alias_generators import to_camel
 
 def _iso_z(value: datetime) -> str:
     """Render as UTC ISO-8601 with a Z suffix, which JS Date parses natively."""
-    return value.astimezone(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+    return value.astimezone(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
 UtcDatetime = Annotated[datetime, PlainSerializer(_iso_z, return_type=str, when_used="json")]
