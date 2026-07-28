@@ -3038,13 +3038,19 @@ Add to `client/package.json` scripts:
 
 Run:
 
+Do NOT hardcode a `fonts.gstatic.com` URL — they carry a version segment (`/v2/`, `/v3/`, …) that changes and 404s. Derive the current one from the CSS API, which requires a modern User-Agent header or it serves legacy TTF:
+
 ```bash
 mkdir -p src/assets/fonts
-curl -sL "https://fonts.gstatic.com/s/doto/v2/PbykFmXiEBPT4ITbgNA5Cg.woff2" \
-  -o src/assets/fonts/doto-variable.woff2
+UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+URL=$(curl -s -A "$UA" "https://fonts.googleapis.com/css2?family=Doto:wght@400..800&display=swap" \
+  | awk '/\/\* latin \*\//{f=1} f && /src:/{match($0,/https:[^)]*/); print substr($0,RSTART,RLENGTH); exit}')
+echo "resolved: $URL"
+curl -sL "$URL" -o src/assets/fonts/doto-variable.woff2
+file src/assets/fonts/doto-variable.woff2   # must report "Web Open Font Format (Version 2)"
 ```
 
-If that URL 404s, open `https://fonts.googleapis.com/css2?family=Doto:wght@400;600;800&display=swap` with a modern browser User-Agent, read the `src: url(...)` value from the returned CSS, and download that. The handoff requires self-hosting; never leave the runtime dependency on Google Fonts.
+The `wght@400..800` range (not `400;600;800`) is what makes Google return a single **variable** file rather than one static file per weight. Only the `latin` subset is taken — the design uses Doto solely for uppercase Latin micro-labels and numerals. The handoff requires self-hosting; never leave a runtime dependency on Google Fonts.
 
 - [ ] **Step 4: Write the tokens**
 
@@ -3055,7 +3061,9 @@ If that URL 404s, open `https://fonts.googleapis.com/css2?family=Doto:wght@400;6
 
 @font-face {
   font-family: "Doto";
-  src: url("../assets/fonts/doto-variable.woff2") format("woff2-variations");
+  /* `format("woff2")` with a weight range is how Google itself declares this
+     variable font; `woff2-variations` is a legacy form Safari mishandles. */
+  src: url("../assets/fonts/doto-variable.woff2") format("woff2");
   font-weight: 400 800;
   font-display: swap;
 }
