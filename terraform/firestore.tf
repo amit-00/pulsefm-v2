@@ -1,7 +1,13 @@
 resource "google_firestore_database" "default" {
   name        = "(default)"
-  location_id = var.region
+  location_id = var.firestore_location
   type        = "FIRESTORE_NATIVE"
+
+  # location_id is ForceNew: changing it destroys and recreates the database,
+  # taking every song and station document with it.
+  lifecycle {
+    prevent_destroy = true
+  }
 
   depends_on = [google_project_service.enabled]
 }

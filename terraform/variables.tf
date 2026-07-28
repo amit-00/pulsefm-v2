@@ -5,7 +5,13 @@ variable "project_id" {
 
 variable "region" {
   type        = string
-  description = "Region for Cloud Run, Cloud Tasks, and Artifact Registry."
+  description = "Region for Cloud Run, Cloud Tasks, and Artifact Registry. Does NOT govern Firestore — see firestore_location."
+  default     = "us-central1"
+}
+
+variable "firestore_location" {
+  type        = string
+  description = "Firestore location. Deliberately separate from var.region: location_id is ForceNew, so changing it destroys and recreates the database."
   default     = "us-central1"
 }
 
