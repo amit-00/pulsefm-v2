@@ -3,16 +3,33 @@
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PORT=8080
+    PORT=8080 \
+    PATH="/app/.venv/bin:${PATH}"
+
+# uv itself, copied from Astral's distroless image rather than `pip install
+# uv` — keeps the tool that resolves/installs pinned to a known build, not
+# whatever pip resolves that day. Bump alongside the uv version pinned for
+# local dev (see `uv --version`) when upgrading.
+COPY --from=ghcr.io/astral-sh/uv:0.9.30 /uv /uvx /bin/
 
 WORKDIR /app
 
+# uv.lock records the full workspace graph, and `--frozen` below refuses to
+# re-resolve it — every member named in [tool.uv.workspace] has to be on
+# disk for uv to make sense of the lock, so the whole workspace is copied
+# in, not just this service. `--package` at sync time still limits what
+# actually gets installed into the venv to this service and its deps.
+COPY pyproject.toml uv.lock /app/
 COPY packages/pulsefm-models /app/packages/pulsefm-models
 COPY services/radio-service /app/services/radio-service
+COPY services/station-api /app/services/station-api
 
-RUN pip install --no-cache-dir /app/packages/pulsefm-models \
- && pip install --no-cache-dir /app/services/radio-service
+# --frozen: install exactly what uv.lock pins, the same lock the test suite
+# ran against — no fresh dependency resolution at build time. This project
+# has history with a transitive major-version break slipping in that way
+# (see docs/adr on the google-auth-library pin); this is how it's prevented
+# going forward. --no-dev skips pytest/httpx — test-only, not runtime.
+RUN uv sync --frozen --no-dev --package pulsefm-radio-service
 
 EXPOSE 8080
 
