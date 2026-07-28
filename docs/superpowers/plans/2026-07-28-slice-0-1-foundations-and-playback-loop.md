@@ -892,7 +892,7 @@ from datetime import UTC, datetime
 from google.cloud import firestore
 
 from pulsefm_radio_service.config import Settings
-from pulsefm_radio_service.logic import CandidateSong, RotationPlan
+from pulsefm_radio_service.logic import CandidateSong, RotationPlan, is_stale_version
 
 
 class StationRepository:
@@ -953,7 +953,10 @@ class StationRepository:
                 if not snapshot.exists:
                     return False
                 existing = snapshot.to_dict() or {}
-                if plan.version <= int(existing.get("version", 0)):
+                # Delegate to the pure core rather than re-deriving the
+                # comparison: logic.py owns staleness semantics and is the
+                # only copy with unit tests behind it.
+                if is_stale_version(plan.version, int(existing.get("version", 0))):
                     return False
 
             transaction.set(
