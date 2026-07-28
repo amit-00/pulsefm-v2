@@ -3588,10 +3588,10 @@ export function useStation(baseUrl: string): StationState {
       }
 
       // Wake just after the boundary if it lands sooner than the next interval.
+      const received = Date.now();
+      const correctedNow = received + computeOffsetMs(next.serverTime, received);
       const untilBoundary =
-        Date.parse(next.endAt ?? next.current.endAt) -
-        (Date.now() + computeOffsetMs(next.serverTime, Date.now())) +
-        BOUNDARY_WAKE_MS;
+        Date.parse(next.current.endAt) - correctedNow + BOUNDARY_WAKE_MS;
       schedule(untilBoundary > 0 ? Math.min(interval, untilBoundary) : interval);
     };
 
@@ -3609,8 +3609,6 @@ export function useStation(baseUrl: string): StationState {
   return { snapshot, offsetMs, error };
 }
 ```
-
-Remove the `next.endAt ??` fallback — `StateSnapshot` has no top-level `endAt`. The correct expression is `Date.parse(next.current.endAt)`. Fix this while writing the file rather than leaving both forms.
 
 - [ ] **Step 4: Write useAudioSlots**
 
