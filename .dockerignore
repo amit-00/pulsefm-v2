@@ -1,0 +1,11 @@
+**/__pycache__/
+**/*.egg-info/
+**/.venv/
+**/.pytest_cache/
+**/.ruff_cache/
+client/
+terraform/
+docs/
+design_handoff_pulse_fm_player/
+.git/
+.github/
