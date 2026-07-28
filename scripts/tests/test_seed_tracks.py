@@ -1,6 +1,9 @@
+import subprocess
+from pathlib import Path
+
 import pytest
 
-from scripts.seed_tracks import SeedTrack, build_song_document, slugify
+from scripts.seed_tracks import SeedTrack, build_song_document, probe_duration_ms, slugify
 
 
 def test_slugify_produces_a_cloud_tasks_safe_id() -> None:
@@ -30,3 +33,30 @@ def test_build_song_document_marks_the_track_ready() -> None:
     assert document["durationMs"] == 232000
     assert document["playCount"] == 0
     assert document["title"] == "Nightshift Drift"
+
+
+def test_probe_duration_ms_reports_a_missing_ffprobe_binary(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_run(*args: object, **kwargs: object) -> None:
+        raise FileNotFoundError("ffprobe")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    with pytest.raises(RuntimeError, match="ffmpeg"):
+        probe_duration_ms(Path("/tmp/nightshift.m4a"))
+
+
+def test_probe_duration_ms_reports_missing_duration_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeResult:
+        stdout = '{"format": {}}'
+
+    def fake_run(*args: object, **kwargs: object) -> FakeResult:
+        return FakeResult()
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    with pytest.raises(RuntimeError, match="nightshift.m4a"):
+        probe_duration_ms(Path("/tmp/nightshift.m4a"))

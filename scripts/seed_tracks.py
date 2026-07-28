@@ -41,19 +41,39 @@ def slugify(name: str) -> str:
 
 
 def probe_duration_ms(path: Path) -> int:
-    result = subprocess.run(
-        [
-            "ffprobe",
-            "-v", "error",
-            "-show_entries", "format=duration",
-            "-of", "json",
-            str(path),
-        ],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    seconds = float(json.loads(result.stdout)["format"]["duration"])
+    """Read a track's duration with ffprobe.
+
+    Every failure here surfaces on a human's first hand-run of the script, so
+    each one names the file and what to do about it. A bare traceback from a
+    subprocess is not a diagnosis.
+    """
+    command = [
+        "ffprobe",
+        "-v", "error",
+        "-show_entries", "format=duration",
+        "-of", "json",
+        str(path),
+    ]
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=True)
+    except FileNotFoundError as error:
+        raise RuntimeError(
+            "ffprobe was not found on PATH. It ships with ffmpeg — install it "
+            "with `brew install ffmpeg` (macOS) or `apt install ffmpeg` (Debian), "
+            "then re-run."
+        ) from error
+    except subprocess.CalledProcessError as error:
+        raise RuntimeError(
+            f"ffprobe could not read {path}: {(error.stderr or '').strip() or 'no error output'}"
+        ) from error
+
+    try:
+        seconds = float(json.loads(result.stdout)["format"]["duration"])
+    except (json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
+        raise RuntimeError(
+            f"ffprobe reported no usable duration for {path}. Is it a valid audio file?"
+        ) from error
+
     return int(seconds * 1000)
 
 
