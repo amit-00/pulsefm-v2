@@ -236,9 +236,13 @@ GCS bucket (public read, CORS enabled) + Cloud CDN → audio delivery
 
 ```
 station/current
-  songId, startAt, endAt, durationMs, title, artist, descriptor
+  songId, startAt, endAt, durationMs
   nextSongId, nextStatus: generating | ready | fallback
   pollId, version                        ← monotonic; guards every rotation
+  # title, artist, descriptor deliberately NOT stored here (diverges from an
+  # earlier draft of this table): station-api reads them off songs/{songId}
+  # instead, so there is one copy of song metadata, not a denormalised one
+  # that could drift from it.
 
 polls/{pollId}
   songId, opensAt, closesAt

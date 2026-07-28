@@ -51,6 +51,9 @@ def test_schedule_creates_a_deterministically_named_oidc_task() -> None:
     assert task["http_request"]["oidc_token"]["service_account_email"] == (
         "tick@pulsefm-test.iam.gserviceaccount.com"
     )
+    # A wrong audience is a silent 401 at delivery time — undetectable
+    # without a real deploy unless it's pinned in a test.
+    assert task["http_request"]["oidc_token"]["audience"] == "https://radio.invalid/tick"
     assert json.loads(task["http_request"]["body"]) == {"version": 8}
     assert task["schedule_time"] == END_AT
 

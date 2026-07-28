@@ -141,7 +141,7 @@ def test_rotate_rejects_a_stale_version(
     assert station["version"] == 2
 
 
-def test_rotate_increments_the_play_counter(
+def test_bootstrap_increments_the_play_counter(
     firestore_client: firestore.Client, settings: Settings
 ) -> None:
     _seed_song(firestore_client, settings, "a", duration_ms=1000, play_count=3)
@@ -151,5 +151,31 @@ def test_rotate_increments_the_play_counter(
     )
 
     song = repo.get_song("a")
+    assert song is not None
+    assert song["playCount"] == 4
+
+
+def test_rotate_increments_the_play_counter(
+    firestore_client: firestore.Client, settings: Settings
+) -> None:
+    """bootstrap and rotate share `_apply`; this exercises the play-count
+    increment through the rotate path specifically, not just bootstrap."""
+    _seed_song(firestore_client, settings, "a", duration_ms=1000, play_count=0)
+    _seed_song(firestore_client, settings, "b", duration_ms=2000, play_count=3)
+    repo = StationRepository(firestore_client, settings)
+    repo.bootstrap(
+        plan_rotation(promoted=CandidateSong("a", 1000), pool=[], now=NOW, current_version=0)
+    )
+
+    repo.rotate(
+        plan_rotation(
+            promoted=CandidateSong("b", 2000),
+            pool=[CandidateSong("a", 1000)],
+            now=NOW,
+            current_version=1,
+        )
+    )
+
+    song = repo.get_song("b")
     assert song is not None
     assert song["playCount"] == 4
