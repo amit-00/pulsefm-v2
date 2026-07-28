@@ -25,3 +25,9 @@ variable "client_origins" {
   description = "Origins allowed to read audio with CORS (needed by the slice 4 analyser)."
   default     = ["http://localhost:5173"]
 }
+
+variable "tick_url" {
+  type        = string
+  description = "Absolute URL of radio-service's /tick endpoint. Empty on the first apply — Cloud Run's URL is not known until the service exists. Read `terraform output radio_service_url` after the first apply, set this to \"<that url>/tick\", and apply again."
+  default     = ""
+}

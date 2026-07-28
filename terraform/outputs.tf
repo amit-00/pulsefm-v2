@@ -7,3 +7,13 @@ output "songs_bucket_name" {
   value       = google_storage_bucket.songs.name
   description = "Bucket holding encoded tracks."
 }
+
+output "station_api_url" {
+  value       = google_cloud_run_v2_service.station_api.uri
+  description = "Public base URL for the read API."
+}
+
+output "radio_service_url" {
+  value       = google_cloud_run_v2_service.radio.uri
+  description = "Internal base URL for the rotation clock."
+}

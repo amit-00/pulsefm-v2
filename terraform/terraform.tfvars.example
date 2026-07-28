@@ -3,3 +3,4 @@ region             = "us-central1"
 firestore_location = "us-central1"
 songs_bucket_name  = "pulsefm-v2-songs"
 client_origins     = ["http://localhost:5173", "https://pulsefm-v2.web.app"]
+tick_url           = "" # set after the first apply
