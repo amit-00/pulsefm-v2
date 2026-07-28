@@ -2209,7 +2209,13 @@ variable "project_id" {
 
 variable "region" {
   type        = string
-  description = "Region for Cloud Run, Cloud Tasks, and Artifact Registry."
+  description = "Region for Cloud Run, Cloud Tasks, and Artifact Registry. Does NOT govern Firestore — see firestore_location."
+  default     = "us-central1"
+}
+
+variable "firestore_location" {
+  type        = string
+  description = "Firestore location. Deliberately separate from var.region: location_id is ForceNew, so changing it destroys and recreates the database."
   default     = "us-central1"
 }
 
@@ -2228,8 +2234,9 @@ variable "client_origins" {
 `terraform/terraform.tfvars.example`:
 
 ```hcl
-project_id        = "pulsefm-v2"
-region            = "us-central1"
+project_id         = "pulsefm-v2"
+region             = "us-central1"
+firestore_location = "us-central1"
 songs_bucket_name = "pulsefm-v2-songs"
 client_origins    = ["http://localhost:5173", "https://pulsefm-v2.web.app"]
 ```
@@ -2266,8 +2273,14 @@ resource "google_project_service" "enabled" {
 ```hcl
 resource "google_firestore_database" "default" {
   name        = "(default)"
-  location_id = var.region
+  location_id = var.firestore_location
   type        = "FIRESTORE_NATIVE"
+
+  # location_id is ForceNew: changing it destroys and recreates the database,
+  # taking every song and station document with it.
+  lifecycle {
+    prevent_destroy = true
+  }
 
   depends_on = [google_project_service.enabled]
 }
@@ -2314,17 +2327,23 @@ resource "google_artifact_registry_repository" "services" {
 resource "google_service_account" "radio" {
   account_id   = "pulsefm-radio"
   display_name = "PulseFM radio-service runtime"
+
+  depends_on = [google_project_service.enabled]
 }
 
 resource "google_service_account" "station_api" {
   account_id   = "pulsefm-station-api"
   display_name = "PulseFM station-api runtime"
+
+  depends_on = [google_project_service.enabled]
 }
 
 # Cloud Tasks mints OIDC tokens as this identity to call radio-service /tick.
 resource "google_service_account" "tick_invoker" {
   account_id   = "pulsefm-tick-invoker"
   display_name = "PulseFM Cloud Tasks tick invoker"
+
+  depends_on = [google_project_service.enabled]
 }
 ```
 
