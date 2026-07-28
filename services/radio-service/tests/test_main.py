@@ -1,5 +1,7 @@
+import logging
 from datetime import UTC, datetime
 
+import pytest
 from fastapi.testclient import TestClient
 from pulsefm_radio_service.logic import CandidateSong, RotationPlan
 from pulsefm_radio_service.main import build_app
@@ -38,6 +40,21 @@ class FakeScheduler:
     def schedule(self, *, song_id: str, end_at: datetime, version: int) -> bool:
         self.scheduled.append((song_id, end_at, version))
         return True
+
+
+class DedupSchedulerStub:
+    """Mirrors TickScheduler when an equivalent task already existed."""
+
+    def schedule(self, *, song_id: str, end_at: datetime, version: int) -> bool:
+        return False
+
+
+class RaisingSchedulerStub:
+    """Mirrors TickScheduler when create_task raises something other than
+    AlreadyExists — an unexpected error that must not be swallowed."""
+
+    def schedule(self, *, song_id: str, end_at: datetime, version: int) -> bool:
+        raise RuntimeError("cloud tasks unavailable")
 
 
 def _client(repository: FakeRepository, scheduler: FakeScheduler) -> TestClient:
@@ -143,3 +160,61 @@ def test_tick_falls_back_when_the_queued_song_left_the_pool() -> None:
 
     assert response.status_code == 200
     assert repository.rotated[0].song_id == "c"
+
+
+def test_tick_logs_an_error_when_scheduling_does_not_create_a_task(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    station = {"songId": "a", "nextSongId": "b", "version": 1}
+    repository = FakeRepository(station, [CandidateSong("b", 180000), CandidateSong("a", 1000)])
+
+    with caplog.at_level(logging.ERROR):
+        response = _client(repository, DedupSchedulerStub()).post("/tick", json={"version": 2})
+
+    # The rotation itself still succeeded — a missing successor tick must
+    # not be reported as a request failure.
+    assert response.status_code == 200
+    assert response.json()["status"] == "rotated"
+    assert any(record.levelno == logging.ERROR for record in caplog.records)
+    assert "b" in caplog.text
+    assert "2" in caplog.text
+
+
+def test_bootstrap_logs_an_error_when_scheduling_does_not_create_a_task(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    repository = FakeRepository(None, [CandidateSong("a", 232000)])
+
+    with caplog.at_level(logging.ERROR):
+        response = _client(repository, DedupSchedulerStub()).post("/bootstrap")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "started"
+    assert any(record.levelno == logging.ERROR for record in caplog.records)
+
+
+def test_tick_scheduling_failure_surfaces_rather_than_being_swallowed() -> None:
+    """An unexpected exception from schedule() (anything but AlreadyExists)
+    must propagate: the rotation write is already durable, and Cloud Tasks
+    retrying this delivery is the recovery path, not a caught-and-ignored
+    error here."""
+    station = {"songId": "a", "nextSongId": "b", "version": 1}
+    repository = FakeRepository(station, [CandidateSong("b", 180000), CandidateSong("a", 1000)])
+
+    client = _client(repository, RaisingSchedulerStub())
+
+    with pytest.raises(RuntimeError, match="cloud tasks unavailable"):
+        client.post("/tick", json={"version": 2})
+
+    assert repository.rotated[0].song_id == "b"
+
+
+def test_bootstrap_scheduling_failure_surfaces_rather_than_being_swallowed() -> None:
+    repository = FakeRepository(None, [CandidateSong("a", 232000)])
+
+    client = _client(repository, RaisingSchedulerStub())
+
+    with pytest.raises(RuntimeError, match="cloud tasks unavailable"):
+        client.post("/bootstrap")
+
+    assert repository.bootstrapped[0].song_id == "a"
