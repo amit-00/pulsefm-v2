@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Deterministic bar-height profile from the design handoff.
@@ -22,14 +22,71 @@ interface WaveformProps {
 
 const GAP_PX = 3;
 const PLAYHEAD_HALF_WIDTH = 0.02;
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+
+function matchesReducedMotion(): boolean {
+  // matchMedia is absent under jsdom (and, in principle, any non-browser
+  // renderer). Default to full motion rather than crash or force the static
+  // state on environments that can't tell us either way.
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return false;
+  }
+  return window.matchMedia(REDUCED_MOTION_QUERY).matches;
+}
+
+/**
+ * Tracks prefers-reduced-motion live via a change listener, so an OS-level
+ * toggle mid-session is honoured on its own rather than as a side effect of
+ * some unrelated, frequently re-running effect.
+ */
+function useReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(matchesReducedMotion);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+    const query = window.matchMedia(REDUCED_MOTION_QUERY);
+    const onChange = (event: MediaQueryListEvent) => setReduced(event.matches);
+
+    // Modern browsers expose EventTarget's addEventListener/removeEventListener
+    // on MediaQueryList. Safari < 14 only has the deprecated
+    // addListener/removeListener pair; both are typed on MediaQueryList in
+    // lib.dom, so no assertion is needed to call either.
+    if (typeof query.addEventListener === "function") {
+      query.addEventListener("change", onChange);
+      return () => query.removeEventListener("change", onChange);
+    }
+
+    query.addListener(onChange);
+    return () => query.removeListener(onChange);
+  }, []);
+
+  return reduced;
+}
 
 /**
  * Rendered to a single canvas rather than 60 animated DOM nodes, per the
  * handoff's production note. Honours prefers-reduced-motion by drawing the
  * static paused state.
+ *
+ * The canvas backing store is sized on mount and on real container resize
+ * only (see the sizing effect below) — not per animation frame, which would
+ * reallocate the buffer, implicitly clear it, and force a synchronous layout
+ * read sixty times a second. Playback position is threaded through a ref
+ * rather than a prop dependency so the ~4Hz position ticker doesn't tear
+ * down and rebuild the rAF loop; only bar count, height, play state, and the
+ * reduced-motion preference restart it.
  */
 export function Waveform({ bars, height, progress, isPlaying, className }: WaveformProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const progressRef = useRef(progress);
+  const widthRef = useRef(0);
+  const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    progressRef.current = progress;
+  }, [progress]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -41,24 +98,45 @@ export function Waveform({ bars, height, progress, isPlaying, className }: Wavef
       return;
     }
 
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const resize = () => {
+      const ratio = window.devicePixelRatio || 1;
+      const cssWidth = canvas.clientWidth;
+      widthRef.current = cssWidth;
+      canvas.width = cssWidth * ratio;
+      canvas.height = height * ratio;
+      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    };
+
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, [height]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return;
+    }
+
     const styles = getComputedStyle(document.documentElement);
     const ink = styles.getPropertyValue("--color-ink").trim() || "#111111";
     const accent = styles.getPropertyValue("--color-accent").trim() || "#D6252B";
+    const animate = isPlaying && !reduceMotion;
 
     let frame = 0;
 
     const draw = (timestampMs: number) => {
-      const ratio = window.devicePixelRatio || 1;
-      const cssWidth = canvas.clientWidth;
-      canvas.width = cssWidth * ratio;
-      canvas.height = height * ratio;
-      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+      const cssWidth = widthRef.current;
+      const progress = progressRef.current;
       context.clearRect(0, 0, cssWidth, height);
 
       const barWidth = (cssWidth - GAP_PX * (bars - 1)) / bars;
       const centre = height / 2;
-      const animate = isPlaying && !reduceMotion;
 
       for (let i = 0; i < bars; i += 1) {
         const position = i / bars;
@@ -103,7 +181,7 @@ export function Waveform({ bars, height, progress, isPlaying, className }: Wavef
 
     frame = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(frame);
-  }, [bars, height, progress, isPlaying]);
+  }, [bars, height, isPlaying, reduceMotion]);
 
   return (
     <canvas
