@@ -14,3 +14,5 @@ dist/
 *.tfstate
 *.tfstate.*
 .firebase/
+firestore-debug.log
+client/public/tracks/
