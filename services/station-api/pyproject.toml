@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pulsefm-station-api"
+version = "0.1.0"
+description = "PulseFM public read API."
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "google-cloud-firestore>=2.19",
+  "pulsefm-models",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pulsefm_station_api*"]
+
+[dependency-groups]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.24", "httpx>=0.28"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

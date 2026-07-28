@@ -11,6 +11,7 @@ resolution-markers = [
 members = [
     "pulsefm-models",
     "pulsefm-radio-service",
+    "pulsefm-station-api",
 ]
 
 [manifest.dependency-groups]
@@ -636,6 +637,39 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "google-cloud-firestore", specifier = ">=2.19" },
     { name = "google-cloud-tasks", specifier = ">=2.17" },
+    { name = "pulsefm-models", editable = "packages/pulsefm-models" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.32" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "httpx", specifier = ">=0.28" },
+    { name = "pytest", specifier = ">=8.0" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+]
+
+[[package]]
+name = "pulsefm-station-api"
+version = "0.1.0"
+source = { editable = "services/station-api" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "google-cloud-firestore" },
+    { name = "pulsefm-models" },
+    { name = "uvicorn", extra = ["standard"] },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "httpx" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "google-cloud-firestore", specifier = ">=2.19" },
     { name = "pulsefm-models", editable = "packages/pulsefm-models" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32" },
 ]

@@ -2,6 +2,10 @@
 # settings; per-package configs only apply when pytest's rootdir resolves there.
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# Without this, pytest's rootless "prepend" import mode collides on same-named
+# test modules across service packages (both have tests/test_main.py) once a
+# combined run pulls in more than one service.
+addopts = "--import-mode=importlib"
 markers = [
     "integration: requires the Firestore emulator (FIRESTORE_EMULATOR_HOST)",
 ]
@@ -12,6 +16,7 @@ members = ["services/*", "packages/*"]
 [tool.uv.sources]
 pulsefm-models = { workspace = true }
 pulsefm-radio-service = { workspace = true }
+pulsefm-station-api = { workspace = true }
 
 [dependency-groups]
 dev = ["ruff>=0.6.0"]
