@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Doto";
+  /* `format("woff2")` with a weight range is how Google itself declares this
+     variable font; `woff2-variations` is a legacy form Safari mishandles. */
+  src: url("../assets/fonts/doto-variable.woff2") format("woff2");
+  font-weight: 400 800;
+  font-display: swap;
+}
+
+@theme {
+  --color-canvas: #DEDDD8;
+  --color-bone: #EDECE7;
+  --color-ink: #111111;
+  --color-paper: #F2F1EF;
+  --color-accent: #D6252B;
+
+  /* Lightened accent for use on ink. Present in the prototype markup but
+     absent from the handoff's token table — see spec, "New token". */
+  --color-accent-on-ink: #FF7A7E;
+
+  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "Doto", ui-monospace, monospace;
+
+  --radius-app: 16px;
+  --radius-device: 46px;
+  --radius-sheet: 34px;
+
+  --shadow-frame: 0 40px 80px -30px rgb(0 0 0 / 0.35);
+
+  --ease-viz: cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-bone);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
