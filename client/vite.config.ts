@@ -9,7 +9,5 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test-setup.ts"],
-    // Tasks 14-16 add the actual tests; a bare scaffold must not fail CI.
-    passWithNoTests: true,
   },
 });
