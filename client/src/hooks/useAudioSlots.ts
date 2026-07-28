@@ -19,9 +19,17 @@ export interface AudioSlots {
 /**
  * Two <audio> elements, swapped at each changeover.
  *
- * A single element would have to load the next track at the boundary, which
- * audibly gaps. The idle slot preloads the incoming track so the swap is a
- * play() call on already-buffered audio.
+ * A single element would have to pause the outgoing track and load the
+ * incoming one at the same instant, which is exactly where an audible gap
+ * would show up. Two slots let the outgoing element get paused while the
+ * incoming one is assigned its src and started, rather than reusing one
+ * element for both halves of the swap.
+ *
+ * This is not look-ahead preloading: the load effect below fires reactively
+ * off `url`, i.e. only once a poll has already reported the rotation.
+ * `snapshot.next` is read nowhere here. True preloading — starting the
+ * incoming element's fetch before the boundary, from `snapshot.next` — is
+ * not implemented yet and is deferred to a later slice.
  */
 export function useAudioSlots({
   url,
