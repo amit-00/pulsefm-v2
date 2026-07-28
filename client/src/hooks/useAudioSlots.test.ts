@@ -10,7 +10,9 @@ import { useAudioSlots } from "./useAudioSlots";
  * reach the two underlying slot elements the hook creates internally.
  */
 let audioInstances: HTMLAudioElement[];
-let playSpy: ReturnType<typeof vi.fn>;
+let playSpy: ReturnType<typeof vi.fn<() => Promise<void>>>;
+let pauseSpy: ReturnType<typeof vi.fn<() => void>>;
+let loadSpy: ReturnType<typeof vi.fn<() => void>>;
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -25,9 +27,13 @@ beforeEach(() => {
   }
   vi.stubGlobal("Audio", TrackedAudio);
 
-  playSpy = vi.fn().mockResolvedValue(undefined);
+  playSpy = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  pauseSpy = vi.fn<() => void>();
+  loadSpy = vi.fn<() => void>();
   HTMLMediaElement.prototype.play = playSpy;
-  HTMLMediaElement.prototype.pause = vi.fn();
+  HTMLMediaElement.prototype.pause = pauseSpy;
+  // jsdom's load() also throws "Not implemented", same as play()/pause().
+  HTMLMediaElement.prototype.load = loadSpy;
 });
 
 afterEach(() => {
@@ -82,5 +88,34 @@ describe("useAudioSlots", () => {
     // from mount, and not wherever a paused element happened to be left.
     expect(active.currentTime).toBe(7);
     expect(playSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("releases both audio elements on unmount", () => {
+    const startAtIso = "2026-07-28T11:59:55Z";
+
+    const { unmount } = renderHook(() =>
+      useAudioSlots({
+        url: "https://cdn.example/tracks/a.m4a",
+        startAtIso,
+        offsetMs: 0,
+        durationMs: 60_000,
+      }),
+    );
+
+    expect(audioInstances).toHaveLength(2);
+    // Clear calls made by the mount-time load effect (it pauses the outgoing
+    // slot) so the assertions below reflect only the unmount cleanup.
+    pauseSpy.mockClear();
+    loadSpy.mockClear();
+    unmount();
+
+    // A playing HTMLAudioElement is kept alive by the browser's media engine
+    // independently of JS references, so unmount must explicitly pause,
+    // drop the src, and reload both slots — not just the active one.
+    expect(pauseSpy).toHaveBeenCalledTimes(2);
+    expect(loadSpy).toHaveBeenCalledTimes(2);
+    for (const element of audioInstances) {
+      expect(element.hasAttribute("src")).toBe(false);
+    }
   });
 });

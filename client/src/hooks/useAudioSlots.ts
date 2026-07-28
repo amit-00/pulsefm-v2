@@ -65,9 +65,12 @@ export function useAudioSlots({
 
     outgoing.pause();
     if (isPlaying) {
-      incoming.play().catch((caught: unknown) => {
-        setError(caught instanceof Error ? caught : new Error(String(caught)));
-      });
+      incoming
+        .play()
+        .then(() => setError(null))
+        .catch((caught: unknown) => {
+          setError(caught instanceof Error ? caught : new Error(String(caught)));
+        });
     }
   }, [url, startAtIso, offsetMs, isPlaying]);
 
@@ -82,6 +85,23 @@ export function useAudioSlots({
     }, 250);
     return () => clearInterval(id);
   }, [startAtIso, offsetMs, durationMs]);
+
+  // A playing HTMLAudioElement is kept alive by the browser's media engine
+  // independently of JS references, so dropping the ref is not enough — without
+  // this, navigating away leaves the station playing with nothing on screen.
+  useEffect(() => {
+    const slots = slotsRef.current;
+    return () => {
+      if (!slots) {
+        return;
+      }
+      for (const element of slots) {
+        element.pause();
+        element.removeAttribute("src");
+        element.load();
+      }
+    };
+  }, []);
 
   const toggle = useCallback(() => {
     const slots = slotsRef.current;
@@ -100,7 +120,10 @@ export function useAudioSlots({
     active.currentTime = computePositionMs(startAtIso, offsetMs) / 1000;
     active
       .play()
-      .then(() => setIsPlaying(true))
+      .then(() => {
+        setIsPlaying(true);
+        setError(null);
+      })
       .catch((caught: unknown) => {
         setError(caught instanceof Error ? caught : new Error(String(caught)));
       });
