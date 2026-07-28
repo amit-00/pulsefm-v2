@@ -6,6 +6,7 @@ from pulsefm_radio_service.logic import (
     build_tick_task_id,
     is_stale_version,
     plan_rotation,
+    resolve_promoted,
     select_following,
 )
 
@@ -30,6 +31,28 @@ def test_select_following_returns_none_when_pool_has_only_the_excluded_song() ->
 
 def test_select_following_returns_none_for_an_empty_pool() -> None:
     assert select_following([], exclude_song_id="a") is None
+
+
+def test_resolve_promoted_returns_the_preferred_song_when_present() -> None:
+    pool = [CandidateSong("a", 1000), CandidateSong("b", 2000)]
+
+    assert resolve_promoted(pool, "b") == CandidateSong("b", 2000)
+
+
+def test_resolve_promoted_falls_back_to_the_pool_head_when_preferred_is_absent() -> None:
+    pool = [CandidateSong("a", 1000), CandidateSong("b", 2000)]
+
+    assert resolve_promoted(pool, "gone") == CandidateSong("a", 1000)
+
+
+def test_resolve_promoted_returns_none_for_an_empty_pool() -> None:
+    assert resolve_promoted([], "a") is None
+
+
+def test_resolve_promoted_returns_the_pool_head_when_no_preference_is_given() -> None:
+    pool = [CandidateSong("a", 1000), CandidateSong("b", 2000)]
+
+    assert resolve_promoted(pool, None) == CandidateSong("a", 1000)
 
 
 def test_plan_rotation_promotes_and_derives_the_window() -> None:

@@ -47,6 +47,21 @@ def select_following(pool: list[CandidateSong], exclude_song_id: str) -> Candida
     return None
 
 
+def resolve_promoted(
+    pool: list[CandidateSong], preferred_song_id: str | None
+) -> CandidateSong | None:
+    """Prefer the queued song; fall back to the pool head when it is gone.
+
+    A song can leave the pool between being queued and being promoted, so the
+    queued id is a preference, never a guarantee.
+    """
+    if preferred_song_id is not None:
+        for candidate in pool:
+            if candidate.song_id == preferred_song_id:
+                return candidate
+    return pool[0] if pool else None
+
+
 def plan_rotation(
     *,
     promoted: CandidateSong,

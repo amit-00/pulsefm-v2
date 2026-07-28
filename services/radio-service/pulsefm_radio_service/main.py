@@ -15,7 +15,13 @@ from google.cloud import firestore, tasks_v2
 from pydantic import BaseModel
 
 from pulsefm_radio_service.config import settings_from_env
-from pulsefm_radio_service.logic import CandidateSong, RotationPlan, is_stale_version, plan_rotation
+from pulsefm_radio_service.logic import (
+    CandidateSong,
+    RotationPlan,
+    is_stale_version,
+    plan_rotation,
+    resolve_promoted,
+)
 from pulsefm_radio_service.repository import StationRepository
 from pulsefm_radio_service.scheduler import TickScheduler
 
@@ -40,21 +46,6 @@ class TickRequest(BaseModel):
     version: int
 
 
-def _resolve_promoted(
-    pool: list[CandidateSong], preferred_song_id: str | None
-) -> CandidateSong | None:
-    """Prefer the queued song; fall back to the pool head when it is gone.
-
-    A song can leave the pool between being queued and being promoted, so the
-    queued id is a preference, never a guarantee.
-    """
-    if preferred_song_id is not None:
-        for candidate in pool:
-            if candidate.song_id == preferred_song_id:
-                return candidate
-    return pool[0] if pool else None
-
-
 def build_app(repository: Repository, scheduler: Scheduler, clock: Clock) -> FastAPI:
     app = FastAPI(title="pulsefm-radio-service")
     pool_limit = 20
@@ -66,7 +57,7 @@ def build_app(repository: Repository, scheduler: Scheduler, clock: Clock) -> Fas
     @app.post("/bootstrap")
     def bootstrap() -> dict[str, object]:
         pool = repository.list_pool(limit=pool_limit)
-        promoted = _resolve_promoted(pool, None)
+        promoted = resolve_promoted(pool, None)
         if promoted is None:
             raise HTTPException(
                 status_code=503,
@@ -101,7 +92,7 @@ def build_app(repository: Repository, scheduler: Scheduler, clock: Clock) -> Fas
             return {"status": "stale", "version": current_version}
 
         pool = repository.list_pool(limit=pool_limit)
-        promoted = _resolve_promoted(pool, station.get("nextSongId"))
+        promoted = resolve_promoted(pool, station.get("nextSongId"))
         if promoted is None:
             raise HTTPException(
                 status_code=503,
