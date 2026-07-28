@@ -19,7 +19,7 @@ pulsefm-radio-service = { workspace = true }
 pulsefm-station-api = { workspace = true }
 
 [dependency-groups]
-dev = ["ruff>=0.6.0"]
+dev = ["ruff>=0.6.0", "google-cloud-storage>=2.18"]
 
 [tool.ruff]
 line-length = 100

@@ -18,7 +18,7 @@ jobs:
       - name: Lint
         run: uv run ruff check .
       - name: Unit tests
-        run: uv run pytest packages/ services/ -v -m "not integration"
+        run: uv run pytest packages/ services/ scripts/ -v -m "not integration"
 
   python-integration:
     runs-on: ubuntu-latest
@@ -35,4 +35,4 @@ jobs:
       - name: Integration tests against the Firestore emulator
         run: |
           npx -y firebase-tools emulators:exec --only firestore --project pulsefm-test \
-            "uv run pytest packages/ services/ -v -m integration"
+            "uv run pytest packages/ services/ scripts/ -v -m integration"
