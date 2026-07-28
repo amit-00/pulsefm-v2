@@ -1,0 +1,4 @@
+project_id        = "pulsefm-v2"
+region            = "us-central1"
+songs_bucket_name = "pulsefm-v2-songs"
+client_origins    = ["http://localhost:5173", "https://pulsefm-v2.web.app"]
