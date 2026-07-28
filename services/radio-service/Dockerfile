@@ -14,15 +14,14 @@ COPY --from=ghcr.io/astral-sh/uv:0.9.30 /uv /uvx /bin/
 
 WORKDIR /app
 
-# uv.lock records the full workspace graph, and `--frozen` below refuses to
-# re-resolve it — every member named in [tool.uv.workspace] has to be on
-# disk for uv to make sense of the lock, so the whole workspace is copied
-# in, not just this service. `--package` at sync time still limits what
-# actually gets installed into the venv to this service and its deps.
+# uv.lock records the full workspace graph, but `--frozen --package` doesn't
+# need every workspace member on disk to make sense of it — only the lock,
+# this service, and its actual dependencies. Verified: `uv sync --frozen
+# --no-dev --package pulsefm-radio-service` succeeds with
+# services/station-api absent, so it isn't copied in.
 COPY pyproject.toml uv.lock /app/
 COPY packages/pulsefm-models /app/packages/pulsefm-models
 COPY services/radio-service /app/services/radio-service
-COPY services/station-api /app/services/station-api
 
 # --frozen: install exactly what uv.lock pins, the same lock the test suite
 # ran against — no fresh dependency resolution at build time. This project

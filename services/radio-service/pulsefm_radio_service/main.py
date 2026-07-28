@@ -69,20 +69,19 @@ def build_app(repository: Repository, scheduler: Scheduler, clock: Clock) -> Fas
         if not repository.bootstrap(plan):
             return {"status": "already-running"}
 
-        scheduled = scheduler.schedule(
-            song_id=plan.song_id, end_at=plan.end_at, version=plan.version
-        )
-        if not scheduled:
-            # The rotation committed but no successor task exists to end it —
-            # nothing re-arms the clock. Not expected in normal operation
-            # (see TickScheduler.schedule's docstring): flag it loudly rather
-            # than let the station silently stop.
-            logger.error(
-                "Scheduling did not create a tick task for song %s v%s; "
-                "the station may stall at the end of this track.",
-                plan.song_id,
-                plan.version,
-            )
+        # Schedule the tick with plan.version + 1, not plan.version: by the
+        # time the task fires, station.version == plan.version (this
+        # rotation already landed), so is_stale_version's `<=` guard would
+        # reject a tick carrying plan.version as a replay. plan.version + 1
+        # is the version the *next* rotation will create, which is exactly
+        # what the successor tick must claim to pass the guard.
+        # scheduler.schedule returns False only when it caught AlreadyExists
+        # (see TickScheduler.schedule's docstring) — an equivalent task
+        # already exists and will fire, so this is the idempotency
+        # guarantee working, not a stall. scheduler.py already logs that
+        # case at INFO; nothing further to report here. A genuine failure
+        # raises instead and propagates to the caller.
+        scheduler.schedule(song_id=plan.song_id, end_at=plan.end_at, version=plan.version + 1)
         logger.info("Station started on %s until %s", plan.song_id, plan.end_at)
         return {"status": "started", "songId": plan.song_id, "version": plan.version}
 
@@ -119,18 +118,12 @@ def build_app(repository: Repository, scheduler: Scheduler, clock: Clock) -> Fas
             logger.info("Lost the rotation race for v%s", plan.version)
             return {"status": "lost-race", "version": current_version}
 
-        scheduled = scheduler.schedule(
-            song_id=plan.song_id, end_at=plan.end_at, version=plan.version
-        )
-        if not scheduled:
-            # See the matching branch in /bootstrap: the rotation is durable
-            # but nothing re-arms the clock for this song's end.
-            logger.error(
-                "Scheduling did not create a tick task for song %s v%s; "
-                "the station may stall at the end of this track.",
-                plan.song_id,
-                plan.version,
-            )
+        # Schedule with plan.version + 1 — see the matching comment in
+        # /bootstrap. scheduler.schedule returning False means an equivalent
+        # task already existed (idempotency working, not a stall); see the
+        # matching comment in /bootstrap for why nothing further is logged
+        # here.
+        scheduler.schedule(song_id=plan.song_id, end_at=plan.end_at, version=plan.version + 1)
         logger.info("Rotated to %s until %s (v%s)", plan.song_id, plan.end_at, plan.version)
         return {"status": "rotated", "songId": plan.song_id, "version": plan.version}
 
