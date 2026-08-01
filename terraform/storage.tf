@@ -39,9 +39,26 @@ resource "google_storage_bucket" "songs" {
 # Audio is world-readable by design: unauthenticated listening is a product
 # requirement, so signed URLs would add cost and defeat shared caching without
 # protecting anything. See spec D1.
+#
+# legacyObjectReader, NOT objectViewer — deliberate, please don't "fix" it.
+# objectViewer carries storage.objects.list as well as .get, which makes the
+# anonymous listing endpoints usable by anyone who knows the bucket name:
+#
+#   GET https://storage.googleapis.com/<bucket>?list-type=2
+#
+# That returns the entire object inventory with sizes and creation timestamps,
+# rather than just the track currently being broadcast. legacyObjectReader
+# grants .get without .list, so single-object reads and Range requests — all
+# playback actually needs — are unaffected. Google recommends precisely this
+# swap for public buckets:
+# https://cloud.google.com/storage/docs/access-control/making-data-public
+#
+# This matters more once generation lands: per spec D5 the worker uploads a
+# track to GCS *before* flipping its Firestore document to status=ready, so a
+# listable bucket exposes unreleased tracks ahead of their rotation.
 resource "google_storage_bucket_iam_member" "songs_public_read" {
   bucket = google_storage_bucket.songs.name
-  role   = "roles/storage.objectViewer"
+  role   = "roles/storage.legacyObjectReader"
   member = "allUsers"
 }
 
