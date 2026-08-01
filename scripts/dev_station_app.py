@@ -8,7 +8,7 @@ the browser's fetch() in useStation needs an Access-Control-Allow-Origin
 response header or it never sees the JSON body.
 
 Run: uv run uvicorn scripts.dev_station_app:app --port 8000
-Requires FIRESTORE_EMULATOR_HOST and CDN_BASE_URL in the environment.
+Requires FIRESTORE_EMULATOR_HOST and AUDIO_BASE_URL in the environment.
 """
 
 import os
@@ -27,7 +27,7 @@ def _settings() -> Settings:
         project_id=PROJECT_ID,
         station_doc=os.getenv("STATION_DOC", "station/current"),
         songs_collection=os.getenv("SONGS_COLLECTION", "songs"),
-        cdn_base_url=os.environ["CDN_BASE_URL"],
+        audio_base_url=os.environ["AUDIO_BASE_URL"],
         state_max_age_seconds=int(os.getenv("STATE_MAX_AGE_SECONDS", "1")),
         allowed_origins=[os.getenv("DEV_CLIENT_ORIGIN", "http://localhost:5173")],
     )
@@ -42,7 +42,7 @@ _repository = StationReadRepository(
 )
 app = build_app(
     _repository,
-    cdn_base_url=_settings_value.cdn_base_url,
+    audio_base_url=_settings_value.audio_base_url,
     state_max_age_seconds=_settings_value.state_max_age_seconds,
     clock=lambda: datetime.now(tz=UTC),
     allowed_origins=_settings_value.allowed_origins,

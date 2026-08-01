@@ -81,9 +81,12 @@ resource "google_cloud_run_v2_service" "station_api" {
         name  = "PROJECT_ID"
         value = var.project_id
       }
+      # Audio is served straight from the bucket over HTTPS — no CDN in front.
+      # See docs/adr/0002-no-cdn-for-audio.md for why, and for what would
+      # justify putting one back.
       env {
-        name  = "CDN_BASE_URL"
-        value = "http://${google_compute_global_address.cdn.address}"
+        name  = "AUDIO_BASE_URL"
+        value = "https://storage.googleapis.com/${google_storage_bucket.songs.name}"
       }
       env {
         name  = "ALLOWED_ORIGINS"

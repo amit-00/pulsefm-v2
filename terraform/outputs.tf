@@ -1,6 +1,6 @@
-output "cdn_base_url" {
-  value       = "http://${google_compute_global_address.cdn.address}"
-  description = "Base URL for audio objects. Slice 4 puts a managed certificate and domain in front of this."
+output "audio_base_url" {
+  value       = "https://storage.googleapis.com/${google_storage_bucket.songs.name}"
+  description = "Base URL for audio objects, served straight from the bucket over HTTPS. See docs/adr/0002-no-cdn-for-audio.md for when to put a CDN back in front."
 }
 
 output "songs_bucket_name" {

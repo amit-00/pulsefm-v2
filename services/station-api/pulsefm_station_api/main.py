@@ -17,7 +17,11 @@ from pulsefm_models.station import CurrentSong, QueueResponse, StateResponse
 
 from pulsefm_station_api.config import settings_from_env
 from pulsefm_station_api.repository import StationReadRepository
-from pulsefm_station_api.snapshot import MissingSongError, build_state
+from pulsefm_station_api.snapshot import (
+    MissingSongError,
+    build_state,
+    compose_audio_url,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,7 +36,7 @@ class Repository(Protocol):
 
 def build_app(
     repository: Repository,
-    cdn_base_url: str,
+    audio_base_url: str,
     state_max_age_seconds: int,
     clock: Clock,
     allowed_origins: list[str],
@@ -63,7 +67,7 @@ def build_app(
             return build_state(
                 station=station,
                 song=repository.get_song(station["songId"]),
-                cdn_base_url=cdn_base_url,
+                audio_base_url=audio_base_url,
                 server_time=clock(),
             )
         except MissingSongError as error:
@@ -97,7 +101,7 @@ def build_app(
                         title=next_song["title"],
                         artist=next_song["artist"],
                         descriptor=next_song["descriptor"],
-                        url=f"{cdn_base_url.rstrip('/')}/{next_song['objectPath'].lstrip('/')}",
+                        url=compose_audio_url(audio_base_url, next_song["objectPath"]),
                         start_at=current_state.current.end_at,
                         end_at=current_state.current.end_at,
                         duration_ms=int(next_song.get("durationMs", 0)),
@@ -116,7 +120,7 @@ def _build_default_app() -> FastAPI:
     )
     return build_app(
         repository,
-        cdn_base_url=settings.cdn_base_url,
+        audio_base_url=settings.audio_base_url,
         state_max_age_seconds=settings.state_max_age_seconds,
         clock=lambda: datetime.now(tz=UTC),
         allowed_origins=settings.allowed_origins,

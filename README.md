@@ -153,11 +153,38 @@ just exercised by hand.
 
 ## Deploying the client
 
-The client is **not deployable yet**, independent of the backend steps
-above. Firebase Hosting serves HTTPS only; the CDN in front of the audio
-bucket (`terraform/storage.tf`) currently has only an HTTP target proxy
-(`google_compute_target_http_proxy`), with no certificate or HTTPS
-forwarding rule. A browser loading the SPA over HTTPS and pointed at an
-`http://` audio URL blocks the load as mixed content. Slice 4 is where TLS
-in front of the CDN is planned to land; until then, `npm run dev` against a
-deployed backend is the only way to hear the station end to end.
+```bash
+cd client
+VITE_API_BASE_URL="$(terraform -chdir=../terraform output -raw station_api_url)" npm run build
+npx firebase-tools deploy --only hosting --project "$PROJECT_ID"
+```
+
+`client_origins` in `terraform.tfvars` must include the Hosting URL, since
+`station-api`'s CORS allow-list is built from it and is closed by default —
+a mismatch means the browser fetches `/v1/state` and never sees the body.
+
+## How audio is served
+
+Tracks come straight from the bucket over HTTPS
+(`https://storage.googleapis.com/<bucket>/<object>`), with no CDN in front.
+That is a deliberate choice, not an omission — see
+[ADR 0002](docs/adr/0002-no-cdn-for-audio.md).
+
+The short version: a CDN meant a global load balancer at a fixed ~$18/month
+for edge caching this station has no listeners to benefit from, and its
+HTTP-only forwarding rule made the client undeployable, because Firebase
+Hosting is HTTPS and browsers block mixed-content media. Serving from the
+bucket gets HTTPS for free.
+
+**When to put a CDN back**, in rough order of likelihood:
+
+| Trigger | Why |
+|---|---|
+| A custom audio domain on HTTPS | Needs a load balancer and managed certificate. GCS supports a CNAME, but HTTP only |
+| Listeners spread geographically | Edge presence improves join latency and mid-track seeks in a way origin capacity cannot |
+| Sustained listening in the thousands of hours/month | Break-even is ~700 GB/month of egress — roughly 15–20 continuously-connected listeners, or the same hours spread over a larger audience |
+| GCS egress visible on the bill | Filter billing by SKU for Cloud Storage egress. Once it nears ~$18/month, the CDN pays for itself |
+
+ADR 0002 has the arithmetic and the two things to re-verify when restoring
+it — bucket CORS through a `backend_bucket`, and a cache key policy that
+varies on `Origin`.

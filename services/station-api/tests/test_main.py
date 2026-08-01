@@ -48,7 +48,7 @@ def _client(repository: FakeRepository, allowed_origins: list[str] | None = None
     return TestClient(
         build_app(
             repository,
-            cdn_base_url="https://cdn.pulsefm.app",
+            audio_base_url="https://cdn.pulsefm.app",
             state_max_age_seconds=1,
             clock=lambda: SERVER_TIME,
             allowed_origins=allowed_origins if allowed_origins is not None else [],
