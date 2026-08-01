@@ -27,6 +27,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      # The Firestore emulator is a Java process, and firebase-tools refuses to
+      # start it on anything below JDK 21. The runner image ships an older
+      # default, so without this the emulator never boots and every integration
+      # test fails before it runs.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.12"
