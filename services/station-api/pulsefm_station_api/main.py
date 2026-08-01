@@ -17,7 +17,11 @@ from pulsefm_models.station import CurrentSong, QueueResponse, StateResponse
 
 from pulsefm_station_api.config import settings_from_env
 from pulsefm_station_api.repository import StationReadRepository
-from pulsefm_station_api.snapshot import MissingSongError, build_state
+from pulsefm_station_api.snapshot import (
+    MissingSongError,
+    build_state,
+    compose_audio_url,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -97,7 +101,7 @@ def build_app(
                         title=next_song["title"],
                         artist=next_song["artist"],
                         descriptor=next_song["descriptor"],
-                        url=f"{audio_base_url.rstrip('/')}/{next_song['objectPath'].lstrip('/')}",
+                        url=compose_audio_url(audio_base_url, next_song["objectPath"]),
                         start_at=current_state.current.end_at,
                         end_at=current_state.current.end_at,
                         duration_ms=int(next_song.get("durationMs", 0)),
