@@ -32,7 +32,7 @@ class Repository(Protocol):
 
 def build_app(
     repository: Repository,
-    cdn_base_url: str,
+    audio_base_url: str,
     state_max_age_seconds: int,
     clock: Clock,
     allowed_origins: list[str],
@@ -63,7 +63,7 @@ def build_app(
             return build_state(
                 station=station,
                 song=repository.get_song(station["songId"]),
-                cdn_base_url=cdn_base_url,
+                audio_base_url=audio_base_url,
                 server_time=clock(),
             )
         except MissingSongError as error:
@@ -97,7 +97,7 @@ def build_app(
                         title=next_song["title"],
                         artist=next_song["artist"],
                         descriptor=next_song["descriptor"],
-                        url=f"{cdn_base_url.rstrip('/')}/{next_song['objectPath'].lstrip('/')}",
+                        url=f"{audio_base_url.rstrip('/')}/{next_song['objectPath'].lstrip('/')}",
                         start_at=current_state.current.end_at,
                         end_at=current_state.current.end_at,
                         duration_ms=int(next_song.get("durationMs", 0)),
@@ -116,7 +116,7 @@ def _build_default_app() -> FastAPI:
     )
     return build_app(
         repository,
-        cdn_base_url=settings.cdn_base_url,
+        audio_base_url=settings.audio_base_url,
         state_max_age_seconds=settings.state_max_age_seconds,
         clock=lambda: datetime.now(tz=UTC),
         allowed_origins=settings.allowed_origins,

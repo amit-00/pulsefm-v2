@@ -27,7 +27,7 @@ def test_build_state_composes_the_cdn_url() -> None:
     state = build_state(
         station=STATION,
         song=SONG,
-        cdn_base_url="https://cdn.pulsefm.app",
+        audio_base_url="https://cdn.pulsefm.app",
         server_time=SERVER_TIME,
     )
 
@@ -38,7 +38,7 @@ def test_build_state_tolerates_a_trailing_slash_on_the_base_url() -> None:
     state = build_state(
         station=STATION,
         song=SONG,
-        cdn_base_url="https://cdn.pulsefm.app/",
+        audio_base_url="https://cdn.pulsefm.app/",
         server_time=SERVER_TIME,
     )
 
@@ -49,7 +49,7 @@ def test_build_state_carries_song_metadata_and_next_up() -> None:
     state = build_state(
         station=STATION,
         song=SONG,
-        cdn_base_url="https://cdn.pulsefm.app",
+        audio_base_url="https://cdn.pulsefm.app",
         server_time=SERVER_TIME,
     )
 
@@ -66,6 +66,6 @@ def test_build_state_rejects_a_song_document_that_is_missing() -> None:
         build_state(
             station=STATION,
             song=None,
-            cdn_base_url="https://cdn.pulsefm.app",
+            audio_base_url="https://cdn.pulsefm.app",
             server_time=SERVER_TIME,
         )

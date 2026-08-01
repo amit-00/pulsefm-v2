@@ -17,7 +17,7 @@ def build_state(
     *,
     station: dict,
     song: dict | None,
-    cdn_base_url: str,
+    audio_base_url: str,
     server_time: datetime,
 ) -> StateResponse:
     song_id = station["songId"]
@@ -33,7 +33,7 @@ def build_state(
             title=song["title"],
             artist=song["artist"],
             descriptor=song["descriptor"],
-            url=f"{cdn_base_url.rstrip('/')}/{song['objectPath'].lstrip('/')}",
+            url=f"{audio_base_url.rstrip('/')}/{song['objectPath'].lstrip('/')}",
             start_at=station["startAt"],
             end_at=station["endAt"],
             duration_ms=int(station["durationMs"]),
