@@ -82,23 +82,50 @@ composes `{base}/{objectPath}` and does not care what serves it.
 Reach for it when one of these is true — not on principle, and not because the
 architecture "should" have one.
 
-**Sustained concurrency in the tens.** The break-even is roughly where the
-egress saving exceeds the load balancer's fixed cost. CDN egress runs about
-$0.04/GB cheaper than GCS egress, so ~$18/month of saving needs on the order of
-450 GB/month. At a ~3.5 MB track and ~17 tracks per listener-hour, that is
-roughly 7,500 listener-hours — about ten listeners connected continuously.
-Below that, the CDN costs more than it saves.
+**Sustained listening in the thousands of hours per month.** Rates below were
+checked against Google Cloud's published pricing on 2026-08-01; re-check them
+before acting, because they drift.
+
+| Item | Rate |
+|---|---|
+| GCS internet egress (Premium Tier, first 1 TB) | $0.12/GB |
+| GCS Always Free egress from North America | first 100 GB/month |
+| Cloud CDN cache egress (North America, first 10 TiB) | $0.08/GiB (≈ $0.0745/GB) |
+| Cloud CDN cache fill (same region) | $0.01/GiB |
+| Cloud CDN cache lookup | $0.0075 per 10,000 requests |
+| Global forwarding rule (first 5) | $0.025/hour ≈ $18.25/month |
+
+The Always Free 100 GB applies to Cloud Storage egress. Cache egress is a
+separate Cloud CDN SKU and does not draw on it, so the no-CDN path is free
+where the CDN path is not. Setting the two equal:
+
+```
+0.12 × (G − 100)  =  18.25 + 0.0745 × G
+              G   ≈  700 GB/month
+```
+
+At a ~3.5 MB track (3.5 min, 128 kbps) and ~17 tracks per listener-hour — about
+58 MB per listener-hour — that is roughly **12,000 listener-hours per month**,
+or **15–20 listeners connected continuously**. Cache fill and lookup charges are
+rounding errors here: a radio station fetches each track from origin once and
+serves it to everyone.
+
+Note this is listener-*hours*, not concurrency. Twenty people around the clock
+and five hundred people for an hour a day cost the same.
 
 **Listeners far from the bucket region.** Egress cost is not the only axis. If
 the audience is geographically spread, edge presence improves join latency and
-seek responsiveness in a way that no amount of origin capacity will.
+seek responsiveness in a way that no amount of origin capacity will. This can
+justify a CDN at any volume, including one listener.
 
 **A custom audio domain on HTTPS.** `audio.pulsefm.app` needs the load balancer
 and a managed certificate. This is the most likely trigger in practice.
 
-**Origin egress showing up in the bill.** Watch GCS egress on the billing
-breakdown. When it approaches the load balancer's fixed cost, the CDN has
-started paying for itself.
+**Origin egress showing up in the bill.** The observational version of the
+first trigger, and the more trustworthy one — it needs no assumptions about
+bitrate or listening patterns. Filter the billing console by SKU and watch
+Cloud Storage egress (*"Download Worldwide Destinations"*). When it approaches
+~$18/month, the CDN has started paying for itself.
 
 Restoring it means re-adding the five resources, pointing `audio_base_url` at
 the new address, and — importantly — **adding the HTTPS proxy and managed

@@ -182,8 +182,8 @@ bucket gets HTTPS for free.
 |---|---|
 | A custom audio domain on HTTPS | Needs a load balancer and managed certificate. GCS supports a CNAME, but HTTP only |
 | Listeners spread geographically | Edge presence improves join latency and mid-track seeks in a way origin capacity cannot |
-| Sustained concurrency in the tens | Break-even is ~450 GB/month of egress, roughly ten continuously-connected listeners |
-| GCS egress visible on the bill | Once it approaches the load balancer's fixed cost, the CDN pays for itself |
+| Sustained listening in the thousands of hours/month | Break-even is ~700 GB/month of egress — roughly 15–20 continuously-connected listeners, or the same hours spread over a larger audience |
+| GCS egress visible on the bill | Filter billing by SKU for Cloud Storage egress. Once it nears ~$18/month, the CDN pays for itself |
 
 ADR 0002 has the arithmetic and the two things to re-verify when restoring
 it — bucket CORS through a `backend_bucket`, and a cache key policy that
