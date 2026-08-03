@@ -4,7 +4,8 @@ The local bring-up has no ffmpeg and no real audio on this machine (see the
 task-17 brief, blocker 2). Browsers play WAV natively, so a few seconds of a
 pure tone per track — different pitches so a changeover is audible — is
 enough to verify sync. Uses only the Python stdlib (`wave`), so it needs no
-project dependencies: `python3 scripts/dev_gen_tones.py`.
+project dependencies. Run as a module — `python3 -m scripts.dev_gen_tones` —
+since it imports `scripts.dev_fixtures`; the direct script path fails.
 
 Output goes to client/public/tracks/, which is gitignored: these are
 generated fixtures, not source.
